@@ -56,12 +56,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #input
 
+        #[automatically_derived]
         impl #original_ty {
             pub fn into_parts(self) -> #parts_ty {
                 self.into()
             }
         }
 
+        #[automatically_derived]
         impl ::std::convert::From<#original_ty> for #parts_ty {
             fn from(#original_var: #original_ty) -> Self {
                 #parts_from_original
