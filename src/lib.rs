@@ -22,10 +22,9 @@ fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
         ))
     };
 
-    let original_var = quote! { original };
-    let original_ty = input.ident;
-    let parts_ty = format_ident!("{}{DERIVATION}", original_ty);
-    let parts_from_original;
+    let from_ty = input.ident;
+    let parts_ty = format_ident!("{from_ty}{DERIVATION}");
+    let new_parts;
 
     input.ident = parts_ty.clone();
 
@@ -47,10 +46,10 @@ fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
                     let span = field.vis.span();
                     let field_name = &field.ident;
                     field.vis = Visibility::Public(Pub { span });
-                    initializers.push(quote! { #field_name: #original_var.#field_name, });
+                    initializers.push(quote! { #field_name: self.#field_name, });
                 }
-                parts_from_original = quote! {
-                    Self { #(#initializers)* }
+                new_parts = quote! {
+                    #parts_ty { #(#initializers)* }
                 };
             }
             Fields::Unnamed(ref mut fields) => {
@@ -59,10 +58,10 @@ fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
                     let span = field.vis.span();
                     let field_index = Index::from(i);
                     field.vis = Visibility::Public(Pub { span });
-                    initializers.push(quote! { #original_var.#field_index, });
+                    initializers.push(quote! { self.#field_index, });
                 }
-                parts_from_original = quote! {
-                    Self(#(#initializers)*)
+                new_parts = quote! {
+                    #parts_ty(#(#initializers)*)
                 };
             }
             Fields::Unit => return unsupported("unit structs"),
@@ -75,16 +74,16 @@ fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
         #input
 
         #[automatically_derived]
-        impl #original_ty {
+        impl #from_ty {
             pub fn into_parts(self) -> #parts_ty {
-                self.into()
+                #new_parts
             }
         }
 
         #[automatically_derived]
-        impl ::std::convert::From<#original_ty> for #parts_ty {
-            fn from(#original_var: #original_ty) -> Self {
-                #parts_from_original
+        impl ::std::convert::From<#from_ty> for #parts_ty {
+            fn from(from: #from_ty) -> Self {
+                from.into_parts()
             }
         }
     }))
