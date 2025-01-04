@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows
+      - uses: docker://rhysd/actionlint:1.7.5
+        with:
+          args: -color
+  rust-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      msrv: ${{ steps.msrv.outputs.detected }}
+      rust-toolchain: ${{ steps.rust-toolchain.outputs.detected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Cargo.toml
+            rust-toolchain.toml
+      - id: msrv
+        run: echo "detected=$(yq --expression '.package.rust-version' Cargo.toml)" | tee -a "$GITHUB_OUTPUT"
+      - id: rust-toolchain
+        run: echo "detected=$(yq --expression '.toolchain.channel' rust-toolchain.toml)" | tee -a "$GITHUB_OUTPUT"
+  cargo:
+    runs-on: ubuntu-latest
+    needs: rust-versions
+    strategy:
+      matrix:
+        rust:
+          - ${{ needs.rust-versions.outputs.msrv }}
+          - ${{ needs.rust-versions.outputs.rust-toolchain }}
+    env:
+      RUSTFLAGS: -Dwarnings
+      RUSTUP_TOOLCHAIN: ${{ matrix.rust }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add clippy rustfmt
+      - run: cargo version
+      - run: cargo fmt --check
+      - run: cargo check
+      - run: cargo clippy --tests
+      - run: cargo test
