@@ -1,18 +1,26 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
+use syn::parse::Parse;
 use syn::spanned::Spanned;
 use syn::token::Pub;
-use syn::{parse_macro_input, DeriveInput, Error, Visibility};
+use syn::{parse_macro_input, Attribute, Data, DeriveInput, Fields, Meta, Visibility};
 
-#[proc_macro_derive(Parts)]
+#[proc_macro_derive(Parts, attributes(parts_attr))]
 pub fn derive(input: TokenStream) -> TokenStream {
+    expand(parse_macro_input!(input as DeriveInput))
+        .unwrap_or_else(|e| e.into_compile_error().into())
+}
+
+fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
     const DERIVATION: &str = "Parts";
 
-    let mut input = parse_macro_input!(input as DeriveInput);
     let span = input.span();
-
-    let compile_error = |message| TokenStream::from(Error::new(span, message).to_compile_error());
-    let not_supported = |types| compile_error(format!("{DERIVATION} is not supported for {types}"));
+    let unsupported = |types| {
+        Err(syn::Error::new(
+            span,
+            format!("{DERIVATION} is not supported for {types}"),
+        ))
+    };
 
     let original_var = quote! { original };
     let original_ty = input.ident;
@@ -20,9 +28,20 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let parts_from_original;
 
     input.ident = parts_ty.clone();
+
+    input.attrs = input
+        .attrs
+        .into_iter()
+        .filter(|attr| attr.path().is_ident("parts_attr"))
+        .map(|attr| {
+            attr.parse_args_with(Meta::parse)
+                .map(|meta| Attribute { meta, ..attr })
+        })
+        .collect::<syn::Result<_>>()?;
+
     match &mut input.data {
-        syn::Data::Struct(ref mut data) => match &mut data.fields {
-            syn::Fields::Named(ref mut fields) => {
+        Data::Struct(ref mut data) => match &mut data.fields {
+            Fields::Named(ref mut fields) => {
                 let mut initializers = vec![];
                 for field in &mut fields.named {
                     let span = field.vis.span();
@@ -34,7 +53,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
                     Self { #(#initializers)* }
                 };
             }
-            syn::Fields::Unnamed(ref mut fields) => {
+            Fields::Unnamed(ref mut fields) => {
                 let mut initializers = vec![];
                 let mut i = 0;
                 for field in &mut fields.unnamed {
@@ -47,13 +66,13 @@ pub fn derive(input: TokenStream) -> TokenStream {
                     Self(#(#initializers)*)
                 };
             }
-            syn::Fields::Unit => return not_supported("unit structs"),
+            Fields::Unit => return unsupported("unit structs"),
         },
-        syn::Data::Enum(_) => return not_supported("enums"),
-        syn::Data::Union(_) => return not_supported("unions"),
+        Data::Enum(_) => return unsupported("enums"),
+        Data::Union(_) => return unsupported("unions"),
     };
 
-    TokenStream::from(quote! {
+    Ok(TokenStream::from(quote! {
         #input
 
         #[automatically_derived]
@@ -69,5 +88,5 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 #parts_from_original
             }
         }
-    })
+    }))
 }
