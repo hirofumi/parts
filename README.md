@@ -1,5 +1,11 @@
 # parts
 
+## Motivation
+
+Structs with private fields have poor compatibility with partial moves.
+To improve this situation, the `Parts` macro derives a struct with public fields
+that can be constructed from the original struct.
+
 ## Example
 
 Suppose `Struct` is defined as follows:
