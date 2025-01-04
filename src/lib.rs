@@ -55,13 +55,11 @@ fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
             }
             Fields::Unnamed(ref mut fields) => {
                 let mut initializers = vec![];
-                let mut i = 0;
-                for field in &mut fields.unnamed {
+                for (i, field) in fields.unnamed.iter_mut().enumerate() {
                     let span = field.vis.span();
                     let field_index = Index::from(i);
                     field.vis = Visibility::Public(Pub { span });
                     initializers.push(quote! { #original_var.#field_index, });
-                    i += 1;
                 }
                 parts_from_original = quote! {
                     Self(#(#initializers)*)
