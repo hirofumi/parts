@@ -3,7 +3,7 @@ use quote::{format_ident, quote};
 use syn::parse::Parse;
 use syn::spanned::Spanned;
 use syn::token::Pub;
-use syn::{parse_macro_input, Attribute, Data, DeriveInput, Fields, Meta, Visibility};
+use syn::{parse_macro_input, Attribute, Data, DeriveInput, Fields, Index, Meta, Visibility};
 
 #[proc_macro_derive(Parts, attributes(parts_attr))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -58,8 +58,9 @@ fn expand(mut input: DeriveInput) -> syn::Result<TokenStream> {
                 let mut i = 0;
                 for field in &mut fields.unnamed {
                     let span = field.vis.span();
+                    let field_index = Index::from(i);
                     field.vis = Visibility::Public(Pub { span });
-                    initializers.push(quote! { #original_var.#i, });
+                    initializers.push(quote! { #original_var.#field_index, });
                     i += 1;
                 }
                 parts_from_original = quote! {
