@@ -10,6 +10,10 @@ jobs:
   actionlint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: /.github/workflows/*.yml
+          sparse-checkout-cone-mode: false
       - uses: hirofumi/run-actionlint@v1.7.6
   rust-versions:
     runs-on: ubuntu-latest
