@@ -14,7 +14,7 @@ jobs:
         with:
           sparse-checkout: /.github/workflows/*.yml
           sparse-checkout-cone-mode: false
-      - uses: hirofumi/run-actionlint@v1.7.6
+      - uses: hirofumi/run-actionlint@v1.7.7
   rust-versions:
     runs-on: ubuntu-latest
     outputs:
