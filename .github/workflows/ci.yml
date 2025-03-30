@@ -12,6 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          persist-credentials: false
           sparse-checkout: /.github/workflows/*.yml
           sparse-checkout-cone-mode: false
       - uses: hirofumi/run-actionlint@ee50a31845315709b1bd54dcfe2a645c7cf9996a # v1.7.7
@@ -23,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          persist-credentials: false
           sparse-checkout: |
             Cargo.toml
             rust-toolchain.toml
@@ -43,6 +45,8 @@ jobs:
       RUSTUP_TOOLCHAIN: ${{ matrix.rust }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - run: rustup component add clippy rustfmt
       - run: cargo version
       - run: cargo fmt --check
